@@ -41,6 +41,7 @@ class PGCN(nn.Module):
     def forward(self, x):
         """前向传播"""
         # 输入x形状: [batch_size, n_channels, n_features]
+        x = x.to(self.adj.device)
 
         # 1. Local GCN
         lap_matrix = normalize_adj(self.adj)  # 归一化邻接矩阵

@@ -18,16 +18,23 @@ class Args:
 
 args = Args()
 
+# 选择设备
+device = torch.device(
+    "cuda" if torch.cuda.is_available() else
+    "mps" if torch.backends.mps.is_available() else
+    "cpu"
+)
+
 # 邻接矩阵与坐标初始化
 n_channels = 23  # 假设有23个通道
 adj = np.random.rand(n_channels, n_channels)  # 替换为实际功能连接矩阵
-adj = torch.FloatTensor(adj)
+adj = torch.FloatTensor(adj).to(device)
 
-coordinate = np.random.rand(n_channels, 2)  # 替换为实际通道坐标（如EEG 10-20系统）
-coordinate = torch.FloatTensor(coordinate)
+coordinate = np.random.rand(n_channels, 2)  # 假设使用二维坐标
+coordinate = torch.FloatTensor(coordinate).to(device)
 
 # 初始化模型
-model = PGCN(args, adj, coordinate)
+model = PGCN(args, adj, coordinate).to(device)
 print(model)
 
 # 加载数据
@@ -35,8 +42,8 @@ file_path = "full_dataset_chb07.h5"
 (x_train, y_train), (x_val, y_val), (x_test, y_test) = load_and_preprocess(file_path)
 
 # 转换为PyTorch张量
-x_train_tensor = torch.tensor(x_train, dtype=torch.float32)
-y_train_tensor = torch.tensor(y_train, dtype=torch.long)
+x_train_tensor = torch.tensor(x_train, dtype=torch.float32).to(device)
+y_train_tensor = torch.tensor(y_train, dtype=torch.long).to(device)
 train_dataset = TensorDataset(x_train_tensor, y_train_tensor)
 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 
