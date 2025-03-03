@@ -143,8 +143,6 @@ subjects = ["data/CHB-MIT/chb01", "data/CHB-MIT/chb02", "data/CHB-MIT/chb03", "d
             "data/CHB-MIT/chb13", "data/CHB-MIT/chb14", "data/CHB-MIT/chb15", "data/CHB-MIT/chb16", "data/CHB-MIT/chb17", "data/CHB-MIT/chb18",
             "data/CHB-MIT/chb19", "data/CHB-MIT/chb20", "data/CHB-MIT/chb21", "data/CHB-MIT/chb22", "data/CHB-MIT/chb23", "data/CHB-MIT/chb24"]
 
-# 处理每个患者时确保通道一致
-# subjects = ["data/CHB-MIT/chb01"]
 desired_length = 30 * 60 * 256
 
 for subject in subjects:
@@ -161,13 +159,3 @@ for subject in subjects:
     fixed_segs = [pad_or_truncate(seg, desired_length) for seg in fixed_segs]
     output_path = f"single_patient_dataset/full_dataset_{patient_id}.h5"
     save_to_hdf5(fixed_segs, labs, output_path)
-
-
-# # 合并结果并保存
-# all_segments = []
-# all_labels = []
-# for segs, labs in results:
-#     all_segments.extend(segs)
-#     all_labels.extend(labs)
-# save_to_hdf5(all_segments, all_labels, "full_dataset.h5")
-
