@@ -24,8 +24,13 @@ device = torch.device(
     "cpu"
 )
 
+# 加载数据（使用 preprocess.py 中的 load_and_preprocess）
+# load_and_preprocess 返回 (x_train, y_train), (x_val, y_val), (x_test, y_test)
+file_path = "full_dataset_chb01.h5"
+(_, _), (_, _), (x_test, y_test) = load_and_preprocess(file_path)
+
 # 构造邻接矩阵和通道坐标（建议保持与训练时一致，这里仅示例用随机矩阵）
-n_channels = 23
+n_channels = x_test.shape[1]
 adj = np.random.rand(n_channels, n_channels)
 adj = torch.FloatTensor(adj).to(device)
 coordinate = np.random.rand(n_channels, 2)  # 假设使用二维坐标
@@ -36,16 +41,12 @@ model = PGCN(args, adj, coordinate).to(device)
 model.load_state_dict(torch.load("pgcn_model.pth", map_location=device))
 model.eval()
 
-# 加载数据（使用 preprocess.py 中的 load_and_preprocess）
-# load_and_preprocess 返回 (x_train, y_train), (x_val, y_val), (x_test, y_test)
-file_path = "full_dataset_chb01.h5"
-(_, _), (_, _), (x_test, y_test) = load_and_preprocess(file_path)
 
 # 转换为 PyTorch 张量，并构造 DataLoader
 x_test_tensor = torch.tensor(x_test, dtype=torch.float32).to(device)
 y_test_tensor = torch.tensor(y_test, dtype=torch.long).to(device)
 test_dataset = TensorDataset(x_test_tensor, y_test_tensor)
-test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False)
 
 # 在测试集上进行预测
 all_preds = []

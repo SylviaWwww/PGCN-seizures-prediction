@@ -137,25 +137,14 @@ def pad_channels(seg, desired_channels):
     return seg
 
 
-# # 示例：批量处理并保存
-# all_segments = []
-# all_labels = []
-# for edf_file in edf_files:
-#     segments, labels = extract_segments(edf_file, summary_file)
-#     all_segments.extend(segments)
-#     all_labels.extend(labels)
-#
-# save_to_hdf5(all_segments, all_labels, "processed_data.h5")
-
-
 # 并行处理所有患者
-# subjects = ["data/CHB-MIT/chb01", "data/CHB-MIT/chb02", "data/CHB-MIT/chb03", "data/CHB-MIT/chb04", "data/CHB-MIT/chb05", "data/CHB-MIT/chb06",
-#             "data/CHB-MIT/chb07", "data/CHB-MIT/chb08", "data/CHB-MIT/chb09", "data/CHB-MIT/chb10", "data/CHB-MIT/chb11", "data/CHB-MIT/chb12",
-#             "data/CHB-MIT/chb13", "data/CHB-MIT/chb14", "data/CHB-MIT/chb15", "data/CHB-MIT/chb16", "data/CHB-MIT/chb17", "data/CHB-MIT/chb18",
-#             "data/CHB-MIT/chb19", "data/CHB-MIT/chb20", "data/CHB-MIT/chb21", "data/CHB-MIT/chb22", "data/CHB-MIT/chb23", "data/CHB-MIT/chb24"]
+subjects = ["data/CHB-MIT/chb01", "data/CHB-MIT/chb02", "data/CHB-MIT/chb03", "data/CHB-MIT/chb04", "data/CHB-MIT/chb05", "data/CHB-MIT/chb06",
+            "data/CHB-MIT/chb07", "data/CHB-MIT/chb08", "data/CHB-MIT/chb09", "data/CHB-MIT/chb10", "data/CHB-MIT/chb11", "data/CHB-MIT/chb12",
+            "data/CHB-MIT/chb13", "data/CHB-MIT/chb14", "data/CHB-MIT/chb15", "data/CHB-MIT/chb16", "data/CHB-MIT/chb17", "data/CHB-MIT/chb18",
+            "data/CHB-MIT/chb19", "data/CHB-MIT/chb20", "data/CHB-MIT/chb21", "data/CHB-MIT/chb22", "data/CHB-MIT/chb23", "data/CHB-MIT/chb24"]
 
 # 处理每个患者时确保通道一致
-subjects = ["data/CHB-MIT/chb17"]
+# subjects = ["data/CHB-MIT/chb01"]
 desired_length = 30 * 60 * 256
 
 for subject in subjects:
@@ -170,7 +159,7 @@ for subject in subjects:
     # 对每个片段先进行通道维度填充，再在时间维度上截断或填充
     fixed_segs = [pad_channels(seg, max_channels) for seg in segs]
     fixed_segs = [pad_or_truncate(seg, desired_length) for seg in fixed_segs]
-    output_path = f"full_dataset_{patient_id}.h5"
+    output_path = f"single_patient_dataset/full_dataset_{patient_id}.h5"
     save_to_hdf5(fixed_segs, labs, output_path)
 
 

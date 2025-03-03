@@ -25,8 +25,12 @@ device = torch.device(
     "cpu"
 )
 
+# 加载数据
+file_path = "full_dataset_chb01.h5"
+(x_train, y_train), (x_val, y_val), (x_test, y_test) = load_and_preprocess(file_path)
+
 # 邻接矩阵与坐标初始化
-n_channels = 23  # 假设有23个通道
+n_channels = x_train.shape[1]
 adj = np.random.rand(n_channels, n_channels)  # 替换为实际功能连接矩阵
 adj = torch.FloatTensor(adj).to(device)
 
@@ -37,15 +41,12 @@ coordinate = torch.FloatTensor(coordinate).to(device)
 model = PGCN(args, adj, coordinate).to(device)
 print(model)
 
-# 加载数据
-file_path = "full_dataset_chb01.h5"
-(x_train, y_train), (x_val, y_val), (x_test, y_test) = load_and_preprocess(file_path)
 
 # 转换为PyTorch张量
 x_train_tensor = torch.tensor(x_train, dtype=torch.float32).to(device)
 y_train_tensor = torch.tensor(y_train, dtype=torch.long).to(device)
 train_dataset = TensorDataset(x_train_tensor, y_train_tensor)
-train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
 
 # 定义优化器和损失函数
 optimizer = Adam(model.parameters(), lr=args.lr)
