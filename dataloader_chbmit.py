@@ -5,26 +5,11 @@ from tqdm import tqdm
 import h5py
 
 
-# STANDARD_CHANNELS = ['FP1-F7', 'F7-T7', 'T7-P7', 'P7-O1', 'FP1-F3', 'F3-C3', 'C3-P3', 'P3-O1', 'FP2-F4', 'F4-C4',
-#                      'C4-P4', 'P4-O2', 'FP2-F8', 'F8-T8', 'T8-P8', 'P8-O2', 'FZ-CZ', 'CZ-PZ', 'P7-T7', 'T7-FT9',
-#                      'FT9-FT10', 'FT10-T8', 'T8-P8']  # 需替换为实际公共通道列表
-STANDARD_CHANNELS = ['FP1-F7', 'F7-T7', 'T7-P7', 'P7-O1', 'FP1-F3', 'F3-C3', 'C3-P3', 'P3-O1', 'FP2-F4', 'F4-C4',
-                     'C4-P4', 'P4-O2', 'FP2-F8', 'F8-T8', 'P8-O2', 'FZ-CZ', 'CZ-PZ', 'P7-T7', 'T7-FT9',
-                     'FT9-FT10', 'FT10-T8']  # 需替换为实际公共通道列表
-def load_edf(edf_path, standard_channels=STANDARD_CHANNELS):
+def load_edf(edf_path):
     """读取EDF文件并确保标准通道存在"""
-    try:
-        raw = mne.io.read_raw_edf(edf_path, preload=True, verbose=False)
-    except Exception as e:
-        print(f"Error reading {edf_path}: {e}")
-        return None, None, None
+    raw = mne.io.read_raw_edf(edf_path, preload=True, verbose=False)
 
-    # 检查所有标准通道是否存在
-    missing = [ch for ch in standard_channels if ch not in raw.ch_names]
-    if missing:
-        print(f"Skipping {edf_path}: Missing channels {missing}")
-        return None, None, None
-    raw.pick_channels(standard_channels)
+    raw.pick(raw.ch_names)
 
     # 降采样
     if raw.info['sfreq'] > 256:
@@ -34,12 +19,6 @@ def load_edf(edf_path, standard_channels=STANDARD_CHANNELS):
     times = raw.times
     return data, times, raw.info
 
-
-# # 示例：读取单个EDF文件
-# edf_path = "data/CHB-MIT/chb01/chb01_03.edf"
-# standard_channels = ['FP1-F7', 'F7-T7', 'T7-P7', 'P7-O1', 'FP1-F3', 'F3-C3', 'C3-P3', 'P3-O1', 'FP2-F4', 'F4-C4', 'C4-P4', 'P4-O2', 'FP2-F8', 'F8-T8', 'T8-P8', 'P8-O2', 'FZ-CZ', 'CZ-PZ', 'P7-T7', 'T7-FT9', 'FT9-FT10', 'FT10-T8', 'T8-P8']  # 完整23通道列表
-# data, times, info = load_edf(edf_path, standard_channels)
-# print("数据形状:", data.shape)  # 输出：(23, 256*60*60) → 假设1小时数据
 
 def extract_segments(edf_path, summary_path, preictal_window=1800, interictal_window=1800):
     data, times, info = load_edf(edf_path)
@@ -65,12 +44,6 @@ def extract_segments(edf_path, summary_path, preictal_window=1800, interictal_wi
     if not seizure_times:
         # 整个文件作为Interictal
         interictal_data = data[:, :interictal_window * fs]
-        segments.append(interictal_data)
-        labels.append(0)
-    else:
-        # 从无发作区域随机截取
-        safe_start = np.random.randint(0, max(1, data.shape[1] - interictal_window * fs))
-        interictal_data = data[:, safe_start:safe_start + interictal_window * fs]
         segments.append(interictal_data)
         labels.append(0)
 
@@ -152,6 +125,17 @@ def pad_or_truncate(seg, desired_length):
     else:
         return seg
 
+def pad_channels(seg, desired_channels):
+    """
+    对 EEG 片段 seg 进行通道维度上的零填充，
+    如果实际通道数小于 desired_channels，则在下方补零。
+    """
+    current_channels = seg.shape[0]
+    if current_channels < desired_channels:
+        pad = np.zeros((desired_channels - current_channels, seg.shape[1]))
+        seg = np.concatenate([seg, pad], axis=0)
+    return seg
+
 
 # # 示例：批量处理并保存
 # all_segments = []
@@ -168,17 +152,24 @@ def pad_or_truncate(seg, desired_length):
 # subjects = ["data/CHB-MIT/chb01", "data/CHB-MIT/chb02", "data/CHB-MIT/chb03", "data/CHB-MIT/chb04", "data/CHB-MIT/chb05", "data/CHB-MIT/chb06",
 #             "data/CHB-MIT/chb07", "data/CHB-MIT/chb08", "data/CHB-MIT/chb09", "data/CHB-MIT/chb10", "data/CHB-MIT/chb11", "data/CHB-MIT/chb12",
 #             "data/CHB-MIT/chb13", "data/CHB-MIT/chb14", "data/CHB-MIT/chb15", "data/CHB-MIT/chb16", "data/CHB-MIT/chb17", "data/CHB-MIT/chb18",
-#             "data/CHB-MIT/chb19", "data/CHB-MIT/chb20", "data/CHB-MIT/chb21", "data/CHB-MIT/chb22", "data/CHB-MIT/chb23", "data/CHB-MIT/
+#             "data/CHB-MIT/chb19", "data/CHB-MIT/chb20", "data/CHB-MIT/chb21", "data/CHB-MIT/chb22", "data/CHB-MIT/chb23", "data/CHB-MIT/chb24"]
 
 # 处理每个患者时确保通道一致
-subjects = ["data/CHB-MIT/chb01"]
+subjects = ["data/CHB-MIT/chb17"]
 desired_length = 30 * 60 * 256
 
 for subject in subjects:
     patient_id, segs, labs = process_patient(subject)
+    print("patient_id:", patient_id)
+    print("segs:", len(segs))
+    print("labs:", labs)
     if not segs:
         continue
-    fixed_segs = [pad_or_truncate(seg, desired_length) for seg in segs]
+    # 统一所有片段的通道数：先求出所有片段中最大的通道数（例如可能为28）
+    max_channels = max(seg.shape[0] for seg in segs)
+    # 对每个片段先进行通道维度填充，再在时间维度上截断或填充
+    fixed_segs = [pad_channels(seg, max_channels) for seg in segs]
+    fixed_segs = [pad_or_truncate(seg, desired_length) for seg in fixed_segs]
     output_path = f"full_dataset_{patient_id}.h5"
     save_to_hdf5(fixed_segs, labs, output_path)
 
