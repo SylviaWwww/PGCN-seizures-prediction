@@ -38,7 +38,7 @@ model = PGCN(args, adj, coordinate).to(device)
 print(model)
 
 # 加载数据
-file_path = "full_dataset_chb07.h5"
+file_path = "full_dataset_chb01.h5"
 (x_train, y_train), (x_val, y_val), (x_test, y_test) = load_and_preprocess(file_path)
 
 # 转换为PyTorch张量

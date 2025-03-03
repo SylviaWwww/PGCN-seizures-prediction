@@ -38,7 +38,7 @@ model.eval()
 
 # 加载数据（使用 preprocess.py 中的 load_and_preprocess）
 # load_and_preprocess 返回 (x_train, y_train), (x_val, y_val), (x_test, y_test)
-file_path = "full_dataset_chb07.h5"
+file_path = "full_dataset_chb01.h5"
 (_, _), (_, _), (x_test, y_test) = load_and_preprocess(file_path)
 
 # 转换为 PyTorch 张量，并构造 DataLoader

@@ -1,5 +1,8 @@
 import h5py
 import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
 
 def load_hdf5(file_path):
     """从 HDF5 文件中加载数据和标签"""
@@ -9,13 +12,12 @@ def load_hdf5(file_path):
     return data, labels
 
 # 示例：加载 HDF5 文件
-file_path = "full_dataset_chb07.h5"
+file_path = "full_dataset_chb01.h5"
 data, labels = load_hdf5(file_path)
 print("数据形状:", data.shape)  # 输出: (n_samples, n_channels, n_times)
 print("标签形状:", labels.shape)  # 输出: (n_samples,)
 
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+
 
 
 # preprocess.py
@@ -32,8 +34,8 @@ def preprocess_data(data, labels, fs=256, test_size=0.2, val_size=0.2):
     features = features.reshape(n_samples, n_channels, n_features)  # 恢复形状
 
     # 划分数据集
-    x_train, x_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=42)
-    x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=val_size, random_state=42)
+    x_train, x_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, stratify=labels, random_state=42)
+    x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.2, random_state=42)
     return (x_train, y_train), (x_val, y_val), (x_test, y_test)
 
 from scipy.signal import welch

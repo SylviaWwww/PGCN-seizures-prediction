@@ -29,7 +29,7 @@ class PGCN(nn.Module):
         self.global_layer_1 = GlobalLayer(30, 40)
 
         # MLP分类器
-        self.mlp0 = nn.Linear(4830, 2048)
+        self.mlp0 = nn.Linear(4410, 2048)
         self.mlp1 = nn.Linear(2048, 1024)
         self.mlp2 = nn.Linear(1024, self.nclass)
 

@@ -1,23 +1,37 @@
 import mne
 import numpy as np
 import os
+from tqdm import tqdm
+import h5py
 
 
-def load_edf(edf_path, standard_channels=None):
-    """读取EDF文件并标准化通道"""
-    raw = mne.io.read_raw_edf(edf_path, preload=True, verbose=False)
+# STANDARD_CHANNELS = ['FP1-F7', 'F7-T7', 'T7-P7', 'P7-O1', 'FP1-F3', 'F3-C3', 'C3-P3', 'P3-O1', 'FP2-F4', 'F4-C4',
+#                      'C4-P4', 'P4-O2', 'FP2-F8', 'F8-T8', 'T8-P8', 'P8-O2', 'FZ-CZ', 'CZ-PZ', 'P7-T7', 'T7-FT9',
+#                      'FT9-FT10', 'FT10-T8', 'T8-P8']  # 需替换为实际公共通道列表
+STANDARD_CHANNELS = ['FP1-F7', 'F7-T7', 'T7-P7', 'P7-O1', 'FP1-F3', 'F3-C3', 'C3-P3', 'P3-O1', 'FP2-F4', 'F4-C4',
+                     'C4-P4', 'P4-O2', 'FP2-F8', 'F8-T8', 'P8-O2', 'FZ-CZ', 'CZ-PZ', 'P7-T7', 'T7-FT9',
+                     'FT9-FT10', 'FT10-T8']  # 需替换为实际公共通道列表
+def load_edf(edf_path, standard_channels=STANDARD_CHANNELS):
+    """读取EDF文件并确保标准通道存在"""
+    try:
+        raw = mne.io.read_raw_edf(edf_path, preload=True, verbose=False)
+    except Exception as e:
+        print(f"Error reading {edf_path}: {e}")
+        return None, None, None
 
-    # 统一通道：选择标准通道（例如CHB-MIT的23通道）
-    if standard_channels:
-        available_channels = [ch for ch in standard_channels if ch in raw.info['ch_names']]
-        raw.pick(available_channels)
+    # 检查所有标准通道是否存在
+    missing = [ch for ch in standard_channels if ch not in raw.ch_names]
+    if missing:
+        print(f"Skipping {edf_path}: Missing channels {missing}")
+        return None, None, None
+    raw.pick_channels(standard_channels)
 
-    # 降采样（可选）：若原始采样率过高（如512Hz），可降低到256Hz
+    # 降采样
     if raw.info['sfreq'] > 256:
         raw.resample(256)
 
-    data = raw.get_data()  # 形状：(n_channels, n_samples)
-    times = raw.times  # 时间轴（单位：秒）
+    data = raw.get_data()
+    times = raw.times
     return data, times, raw.info
 
 
@@ -28,12 +42,10 @@ def load_edf(edf_path, standard_channels=None):
 # print("数据形状:", data.shape)  # 输出：(23, 256*60*60) → 假设1小时数据
 
 def extract_segments(edf_path, summary_path, preictal_window=1800, interictal_window=1800):
-    """从EDF文件中提取发作前期和发作间期段"""
-    # 读取EDF数据
     data, times, info = load_edf(edf_path)
-    fs = int(info['sfreq'])  # 采样率
-
-    # 解析summary文件获取发作时间
+    if data is None:
+        return [], []
+    fs = int(info['sfreq'])
     seizure_times = parse_summary(summary_path, os.path.basename(edf_path))
 
     segments = []
@@ -42,21 +54,23 @@ def extract_segments(edf_path, summary_path, preictal_window=1800, interictal_wi
     # 提取发作前期（Preictal）
     for start, end in seizure_times:
         preictal_start = max(0, start - preictal_window)
-        # print("preictal_start * fs", preictal_start * fs)
-        preictal_data = data[:, int(preictal_start * fs): int(start * fs)]
-        if preictal_data.shape[1] >= fs * 600:  # 至少10分钟数据
+        preictal_end = start
+        # 检查时间窗口长度是否有效
+        if preictal_end - preictal_start > 0:
+            preictal_data = data[:, int(preictal_start * fs): int(preictal_end * fs)]
             segments.append(preictal_data)
             labels.append(1)
 
-    # 提取发作间期（Interictal）：从无发作区域随机截取
+    # 提取发作间期（Interictal）
     if not seizure_times:
         # 整个文件作为Interictal
-        segments.append(data)
+        interictal_data = data[:, :interictal_window * fs]
+        segments.append(interictal_data)
         labels.append(0)
     else:
-        # 随机选择一个远离发作的时间段
-        safe_start = np.random.randint(0, data.shape[1] - interictal_window * fs)
-        interictal_data = data[:, safe_start: safe_start + interictal_window * fs]
+        # 从无发作区域随机截取
+        safe_start = np.random.randint(0, max(1, data.shape[1] - interictal_window * fs))
+        interictal_data = data[:, safe_start:safe_start + interictal_window * fs]
         segments.append(interictal_data)
         labels.append(0)
 
@@ -86,10 +100,6 @@ def parse_summary(summary_path, target_edf):
     return seizure_times
 
 
-import h5py
-from tqdm import tqdm
-
-
 def save_to_hdf5(all_segments, all_labels, output_path):
     """将数据保存为HDF5文件，支持大规模存储"""
     with h5py.File(output_path, 'w') as hf:
@@ -105,16 +115,6 @@ def save_to_hdf5(all_segments, all_labels, output_path):
             hf['labels'].resize((hf['labels'].shape[0] + 1), axis=0)
             hf['labels'][-1] = lab
 
-
-# # 示例：批量处理并保存
-# all_segments = []
-# all_labels = []
-# for edf_file in edf_files:
-#     segments, labels = extract_segments(edf_file, summary_file)
-#     all_segments.extend(segments)
-#     all_labels.extend(labels)
-#
-# save_to_hdf5(all_segments, all_labels, "processed_data.h5")
 
 def process_patient(subject_dir):
     """处理单个患者的所有EDF文件，并返回患者ID、数据片段和标签"""
@@ -136,6 +136,7 @@ def process_patient(subject_dir):
 
     return patient_id, patient_segments, patient_labels
 
+
 def pad_or_truncate(seg, desired_length):
     """
     如果 EEG 片段 seg 的长度大于 desired_length，则截断；
@@ -152,8 +153,15 @@ def pad_or_truncate(seg, desired_length):
         return seg
 
 
-
-standard_channels = ['FP1-F7', 'F7-T7', 'T7-P7', 'P7-O1', 'FP1-F3', 'F3-C3', 'C3-P3', 'P3-O1', 'FP2-F4', 'F4-C4', 'C4-P4', 'P4-O2', 'FP2-F8', 'F8-T8', 'T8-P8', 'P8-O2', 'FZ-CZ', 'CZ-PZ', 'P7-T7', 'T7-FT9', 'FT9-FT10', 'FT10-T8', 'T8-P8']  # 完整23通道列表
+# # 示例：批量处理并保存
+# all_segments = []
+# all_labels = []
+# for edf_file in edf_files:
+#     segments, labels = extract_segments(edf_file, summary_file)
+#     all_segments.extend(segments)
+#     all_labels.extend(labels)
+#
+# save_to_hdf5(all_segments, all_labels, "processed_data.h5")
 
 
 # 并行处理所有患者
@@ -162,18 +170,18 @@ standard_channels = ['FP1-F7', 'F7-T7', 'T7-P7', 'P7-O1', 'FP1-F3', 'F3-C3', 'C3
 #             "data/CHB-MIT/chb13", "data/CHB-MIT/chb14", "data/CHB-MIT/chb15", "data/CHB-MIT/chb16", "data/CHB-MIT/chb17", "data/CHB-MIT/chb18",
 #             "data/CHB-MIT/chb19", "data/CHB-MIT/chb20", "data/CHB-MIT/chb21", "data/CHB-MIT/chb22", "data/CHB-MIT/chb23", "data/CHB-MIT/
 
-subjects = ["data/CHB-MIT/chb07"]
+# 处理每个患者时确保通道一致
+subjects = ["data/CHB-MIT/chb01"]
 desired_length = 30 * 60 * 256
 
-results = [process_patient(subject) for subject in subjects]
-print("results", results)
-
-# 针对每个患者单独保存数据
-for patient_id, segs, labs in results:
+for subject in subjects:
+    patient_id, segs, labs = process_patient(subject)
+    if not segs:
+        continue
     fixed_segs = [pad_or_truncate(seg, desired_length) for seg in segs]
     output_path = f"full_dataset_{patient_id}.h5"
     save_to_hdf5(fixed_segs, labs, output_path)
-    print(f"已保存 {patient_id} 的数据到 {output_path}")
+
 
 # # 合并结果并保存
 # all_segments = []
