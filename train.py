@@ -26,7 +26,7 @@ device = torch.device(
 )
 
 # 加载数据
-file_path = "full_dataset_chb01.h5"
+file_path = "all_patients_merged.h5"
 (x_train, y_train), (x_val, y_val), (x_test, y_test) = load_and_preprocess(file_path)
 
 # 邻接矩阵与坐标初始化
@@ -46,7 +46,7 @@ print(model)
 x_train_tensor = torch.tensor(x_train, dtype=torch.float32).to(device)
 y_train_tensor = torch.tensor(y_train, dtype=torch.long).to(device)
 train_dataset = TensorDataset(x_train_tensor, y_train_tensor)
-train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
+train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 
 # 定义优化器和损失函数
 optimizer = Adam(model.parameters(), lr=args.lr)
