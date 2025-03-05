@@ -46,14 +46,14 @@ print(model)
 x_train_tensor = torch.tensor(x_train, dtype=torch.float32).to(device)
 y_train_tensor = torch.tensor(y_train, dtype=torch.long).to(device)
 train_dataset = TensorDataset(x_train_tensor, y_train_tensor)
-train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
 
 # 定义优化器和损失函数
 optimizer = Adam(model.parameters(), lr=args.lr)
 criterion = nn.CrossEntropyLoss()
 
 # 训练循环
-for epoch in range(10):
+for epoch in range(100):
     model.train()
     for batch_x, batch_y in train_loader:
         optimizer.zero_grad()

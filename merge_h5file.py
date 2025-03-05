@@ -4,7 +4,9 @@ from tqdm import tqdm
 
 
 def find_global_shapes(list_of_files):
-    """先扫描所有文件，找出全局 max_channels, max_times."""
+    """
+    先扫描所有文件，找出全局 max_channels, max_times.
+    """
     max_channels = 0
     max_times = 0
     for fpath in list_of_files:
@@ -25,7 +27,7 @@ def merge_hdf5_files(list_of_files, out_file):
         print("没有要合并的H5文件，结束。")
         return
 
-    # ----------- 第1步：先找出全局最大 c,t -----------
+    # 先找出全局最大 c,t
     global_max_channels, global_max_times = find_global_shapes(list_of_files)
     print("全局最大通道数 =", global_max_channels)
     print("全局最大时间长度 =", global_max_times)
@@ -35,7 +37,7 @@ def merge_hdf5_files(list_of_files, out_file):
         dtype_data = hf_first['data'].dtype
         dtype_labels = hf_first['labels'].dtype
 
-    # ----------- 第2步：新建目标文件，创建可扩展数据集 -----------
+    # 新建目标文件，创建可扩展数据集
     with h5py.File(out_file, 'w') as hf_out:
         maxshape = (None, global_max_channels, global_max_times)  # 只让第0维可扩展
         dset_data = hf_out.create_dataset(
@@ -46,7 +48,7 @@ def merge_hdf5_files(list_of_files, out_file):
             'labels', shape=(0,), maxshape=(None,), chunks=True, dtype=dtype_labels
         )
 
-        # ----------- 第3步：逐个文件追加写入 -----------
+        # 第3步：逐个文件追加写入
         total_samples = 0
         for fpath in tqdm(list_of_files, desc="合并H5文件"):
             with h5py.File(fpath, 'r') as hf_in:

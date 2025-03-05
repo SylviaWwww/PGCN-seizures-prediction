@@ -5,7 +5,9 @@ import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
 
 class LocalLayer(nn.Module):
-    """支持 3D 输入的 Local GCN 层"""
+    """
+    支持 3D 输入的 Local GCN 层
+    """
     def __init__(self, in_features, out_features, use_bias=True):
         super().__init__()
         self.gcn = GCNConv(in_features, out_features, bias=use_bias)
@@ -33,7 +35,9 @@ class LocalLayer(nn.Module):
 
 # layer_PGCN.py
 class MesoLayer(nn.Module):
-    """中尺度子图层（多子图聚合）"""
+    """
+    中尺度子图层（多子图聚合）
+    """
 
     def __init__(self, subgraph_num, num_heads, coordinate, trainable_vector):
         super().__init__()
@@ -52,7 +56,9 @@ class MesoLayer(nn.Module):
 
 
 class GlobalLayer(nn.Module):
-    """全局图卷积层"""
+    """
+    全局图卷积层
+    """
     def __init__(self, in_features, out_features):
         super().__init__()
         self.gcn = GCNConv(in_features, out_features)

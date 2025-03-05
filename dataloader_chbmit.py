@@ -6,9 +6,12 @@ import h5py
 
 
 def load_edf(edf_path):
-    """读取EDF文件并确保标准通道存在"""
+    """
+    读取EDF文件并确保标准通道存在
+    """
     raw = mne.io.read_raw_edf(edf_path, preload=True, verbose=False)
 
+    # 通过读取edf文件header得到channel
     raw.pick(raw.ch_names)
 
     # 降采样
@@ -21,6 +24,9 @@ def load_edf(edf_path):
 
 
 def extract_segments(edf_path, summary_path, preictal_window=1800, interictal_window=1800):
+    """
+    提取发作间期片段，发作前期片段
+    """
     data, times, info = load_edf(edf_path)
     if data is None:
         return [], []
@@ -51,7 +57,9 @@ def extract_segments(edf_path, summary_path, preictal_window=1800, interictal_wi
 
 
 def parse_summary(summary_path, target_edf):
-    """解析summary文件，返回指定EDF文件的发作时间列表"""
+    """
+    解析summary文件，返回指定EDF文件的发作时间列表
+    """
     seizure_times = []
     with open(summary_path, 'r') as f:
         lines = f.readlines()
@@ -74,7 +82,9 @@ def parse_summary(summary_path, target_edf):
 
 
 def save_to_hdf5(all_segments, all_labels, output_path):
-    """将数据保存为HDF5文件，支持大规模存储"""
+    """
+    将数据保存为HDF5文件，支持大规模存储
+    """
     with h5py.File(output_path, 'w') as hf:
         # 创建可扩展的数据集
         max_shape = (None, all_segments[0].shape[0], all_segments[0].shape[1])
@@ -90,7 +100,9 @@ def save_to_hdf5(all_segments, all_labels, output_path):
 
 
 def process_patient(subject_dir):
-    """处理单个患者的所有EDF文件，并返回患者ID、数据片段和标签"""
+    """
+    处理单个患者的所有EDF文件，并返回患者ID、数据片段和标签
+    """
     patient_id = os.path.basename(subject_dir)
     # print("patient_id", patient_id)
     summary_path = os.path.join(subject_dir, f"chb{patient_id[3:]}-summary.txt")

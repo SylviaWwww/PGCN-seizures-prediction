@@ -46,7 +46,7 @@ model.eval()
 x_test_tensor = torch.tensor(x_test, dtype=torch.float32).to(device)
 y_test_tensor = torch.tensor(y_test, dtype=torch.long).to(device)
 test_dataset = TensorDataset(x_test_tensor, y_test_tensor)
-test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
 
 # 在测试集上进行预测
 all_preds = []
