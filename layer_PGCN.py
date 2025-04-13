@@ -16,7 +16,6 @@ class LocalLayer(nn.Module):
         # 输入 x 形状: [batch_size, n_channels, in_features]
         batch_size, n_channels, in_features = x.shape
 
-        # 确保输入数据和邻接矩阵位于同一设备
         x = x.to(adj.device)
 
         # 将 3D 输入转换为 2D（合并批次和通道）
