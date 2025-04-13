@@ -1,10 +1,15 @@
 import torch
+import h5py
 import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 from model_PGCN import PGCN
-from preprocess import load_and_preprocess  # 该函数返回 (x_train, y_train), (x_val, y_val), (x_test, y_test)
+from preprocess import load_hdf5, load_and_preprocess  # 该函数返回 (x_train, y_train), (x_val, y_val), (x_test, y_test)
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import torch.nn as nn
+from connectivity import compute_dataset_connectivity
+
 
 # 定义与训练时一致的参数
 class Args:
@@ -26,19 +31,21 @@ device = torch.device(
 
 # 加载数据（使用 preprocess.py 中的 load_and_preprocess）
 # load_and_preprocess 返回 (x_train, y_train), (x_val, y_val), (x_test, y_test)
-file_path = "all_patients_merged.h5"
+file_path = "patient_dataset/dataset_chb18.h5"
 (_, _), (_, _), (x_test, y_test) = load_and_preprocess(file_path)
 
 # 构造邻接矩阵和通道坐标（建议保持与训练时一致，这里仅示例用随机矩阵）
-n_channels = x_test.shape[1]
-adj = np.random.rand(n_channels, n_channels)
+raw_data, _ = load_hdf5(file_path)
+adj = compute_dataset_connectivity(raw_data, method="mean")
 adj = torch.FloatTensor(adj).to(device)
-coordinate = np.random.rand(n_channels, 2)  # 假设使用二维坐标
-coordinate = torch.FloatTensor(coordinate).to(device)
+# 从合并文件中加载存储好的 coordinates
+with h5py.File(file_path, "r") as hf:
+    coordinates = hf["coordinates"][:]  # 形状应为 (n_channels, 2)
+coordinate = torch.FloatTensor(coordinates).to(device)
 
 # 初始化模型并加载训练好的参数
 model = PGCN(args, adj, coordinate).to(device)
-model.load_state_dict(torch.load("pgcn_model.pth", map_location=device))
+model.load_state_dict(torch.load("trainResults/chb18/pgcn_chb18.pth", map_location=device))
 model.eval()
 
 
@@ -58,6 +65,7 @@ with torch.no_grad():
         all_preds.extend(preds.cpu().numpy())
         all_labels.extend(batch_y.cpu().numpy())
 
+
 # 计算评估指标
 accuracy = accuracy_score(all_labels, all_preds)
 report = classification_report(all_labels, all_preds, target_names=["Interictal", "Preictal"])
@@ -70,7 +78,7 @@ print("Confusion Matrix:")
 print(conf_mat)
 
 # 保存评估报告到文件
-with open("evaluation_report.txt", "w") as f:
+with open("trainResults/chb18/evaluation_report.txt", "w") as f:
     f.write("Test Accuracy: {:.4f}\n".format(accuracy))
     f.write("Classification Report:\n")
     f.write(report)
